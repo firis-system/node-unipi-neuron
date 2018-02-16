@@ -1,0 +1,6 @@
+[submodules "ext/evok"]
+	sparseCheckout = true
+	shallow = true
+[submodule "ext/evok"]
+	path = ext/evok
+	url = https://github.com/UniPiTechnology/evok.git

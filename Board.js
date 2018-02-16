@@ -1,6 +1,7 @@
 "use strict";
 
 const EventEmitter = require('events').EventEmitter;
+const Neuron = require('./Neuron');
 
 const debug = require('debug');
 const info = debug('unipi-neuron:board:info');
@@ -49,8 +50,12 @@ class Board extends EventEmitter {
         this.state = {};
         this.counter = {};
         this.groups = [];
+        this.id = id;
 
-        let self = this;
+        // try to guess neuron model and set the config.groups accordinaly
+        if (id === 0) {
+            Neuron.getNeuronProperties(this);
+        }
 
         // Connect to the board.
         this.client.connect(() => {
@@ -67,8 +72,8 @@ class Board extends EventEmitter {
                         if (errdesc) error(errdesc);
                         else error(err);
                     } else {
-                        let bin = self.dec2bin(data.data[0]);
-                        let ext = self.dec2bin(data.data[1]);
+                        let bin = this.dec2bin(data.data[0]);
+                        let ext = this.dec2bin(data.data[1]);
                         // On first register adress : first eight bits are for the input number, second eight bits are for the output number.
                         // On second register address : first four bits are for the serial port number, second four bits are for the analog input number, third eight bits are for the analog output number.
                         this.groups[i] = {
@@ -81,6 +86,12 @@ class Board extends EventEmitter {
                         };
                     }
                 });
+            }
+
+            // Add fixed registers
+            if (id === 0) {
+                // for main board
+                this.groups[0].led = 4;
             }
         });
     }
@@ -132,7 +143,21 @@ class Board extends EventEmitter {
         let arr = id.split('.');
         let group = arr[0].substr(arr[0].length - 1, 1);
         let num = arr[1];
-        let coilId = (group - 1) * 100 + (num - 1);
+        arr = arr[0].split('-');
+        let type = arr.substring(0, arr.length -1).toLowerCase();
+        let coilId;
+
+        // set coilId
+        if (type === 'do') {
+            coilId = (group - 1) * 100 + (num - 1);
+        }
+        else if (type === 'di') {
+            error('Cannot set state on digital input');
+            return;
+        }
+        else if (type === 'led' && group === 0) {
+            coilId = num + this.groups[0].d0 + this.groups[0].di - 1;
+        }
 
         // Actual write to the board.
         this.client.writeCoil(coilId, value);

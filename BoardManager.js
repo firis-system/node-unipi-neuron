@@ -4,15 +4,19 @@ const EventEmitter = require("events").EventEmitter;
 const Board = require("./Board");
 const RtuConnection = require("./RtuConnection");
 const TcpConnection = require("./TcpConnection");
+const Neuron = require('./Neuron');
 
 const debug = require('debug');
-const info = debug('unipi-neuron:boards:info');
-const warn = debug('unipi-neuron:boards:warn');
-const log = debug('unipi-neuron:boards:log');
-const error = debug('unipi-neuron:boards:error');
+const info = debug('unipi-neuron:neuron:info');
+const warn = debug('unipi-neuron:neuron:warn');
+const log = debug('unipi-neuron:neuron:log');
+const error = debug('unipi-neuron:neuron:error');
 
 /**
- * The board managers initiates boards based on the given config.
+ * The board managers initiates neuron based on the given config.
+ * 
+ * @class BoardManager
+ * @extends {EventEmitter}
  */
 class BoardManager extends EventEmitter {
 
@@ -27,12 +31,12 @@ class BoardManager extends EventEmitter {
      *     - port: '502' (if type is tcp)
      *     - socket: '/dev/extcomm/0/0' (if type is socket)
      *     - id: 15 (if type is socket)
-     *     - groups: 3 (Normally 1 for S type and extension boards, 2 for M type boards and 3 for L type boards)
+     *     - groups: 3 (Normally 1 for S type and extension neuron, 2 for M type neuron and 3 for L type neuron)
      *     - interval: 100 (The interval in milliseconds at which to update the board values)
      */
     constructor(config) {
         super();
-        this.boards = {};
+        this.neuron = {};
 
         for (let i = 0; i < config.length; i++) {
             this.init(config[i]);
@@ -55,6 +59,11 @@ class BoardManager extends EventEmitter {
         }
         if (config.id) {
             id = config.id;
+        }
+
+        // try to guess neuron model and set the config.groups accordinaly
+        if (id === 0 && name === 'local') {
+            Neuron.getNeuronProperties(this, config);
         }
 
         // Switch between tcp and rtu connections.
@@ -85,8 +94,8 @@ class BoardManager extends EventEmitter {
             this.emit('update', name + '-' + id, value);
         });
 
-        // Add the board to the boards variable for later reference.
-        this.boards[name] = board;
+        // Add the board to the neuron variable for later reference.
+        this.neuron[name] = board;
     }
 
     /**
@@ -113,7 +122,7 @@ class BoardManager extends EventEmitter {
      */
     set(id, value) {
         id = this.id(id);
-        this.boards[id.board].set(id.id, value);
+        this.neuron[id.board].set(id.id, value);
     }
 
     /**
@@ -124,7 +133,7 @@ class BoardManager extends EventEmitter {
      */
     getState(id) {
         id = this.id(id);
-        return this.boards[id.board].getState(id.id);
+        return this.neuron[id.board].getState(id.id);
     }
 
     /**
@@ -135,21 +144,21 @@ class BoardManager extends EventEmitter {
      */
     getCount(id) {
         id = this.id(id);
-        return this.boards[id.board].getCount(id.id);
+        return this.neuron[id.board].getCount(id.id);
     }
 
     /**
-     * Gets all io's in all initiated boards.
+     * Gets all io's in all initiated neuron.
      *
      * @returns {{}}
      */
     getAllStates() {
         let data = {};
-        for (let name in this.boards) {
-            if (this.boards.hasOwnProperty(name)) {
-                for (let id in this.boards[name].state) {
-                    if (this.boards[name].state.hasOwnProperty(id)) {
-                        data[name + '-' + id] = this.boards[name].state[id];
+        for (let name in this.neuron) {
+            if (this.neuron.hasOwnProperty(name)) {
+                for (let id in this.neuron[name].state) {
+                    if (this.neuron[name].state.hasOwnProperty(id)) {
+                        data[name + '-' + id] = this.neuron[name].state[id];
                     }
                 }
             }
@@ -158,17 +167,17 @@ class BoardManager extends EventEmitter {
     }
 
     /**
-     * Gets all io's in all initiated boards.
+     * Gets all io's in all initiated neuron.
      *
      * @returns {{}}
      */
     getAllCounts() {
         let data = {};
-        for (let name in this.boards) {
-            if (this.boards.hasOwnProperty(name)) {
-                for (let id in this.boards[name].counter) {
-                    if (this.boards[name].counter.hasOwnProperty(id)) {
-                        data[name + '-' + id] = this.boards[name].counter[id];
+        for (let name in this.neuron) {
+            if (this.neuron.hasOwnProperty(name)) {
+                for (let id in this.neuron[name].counter) {
+                    if (this.neuron[name].counter.hasOwnProperty(id)) {
+                        data[name + '-' + id] = this.neuron[name].counter[id];
                     }
                 }
             }

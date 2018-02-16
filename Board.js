@@ -137,39 +137,75 @@ class Board extends EventEmitter {
      * @param {int} retries
      *   Used internally to check how many retries have been tried.
      */
-    set(id, value, retries = 0) {
+    set(id, value) {
         this.validate(id);
 
         let arr = id.split('.');
         let group = arr[0].substr(arr[0].length - 1, 1);
         let num = arr[1];
         arr = arr[0].split('-');
-        let type = arr.substring(0, arr.length -1).toLowerCase();
+        let type = arr.substring(0, arr.length - 1).toLowerCase();
         let coilId;
+        let registerId;
 
         // set coilId
-        if (type === 'do') {
-            coilId = (group - 1) * 100 + (num - 1);
-        }
-        else if (type === 'di') {
-            error('Cannot set state on digital input');
+        if (type === 'di') {
+            info('Cannot set state on digital input');
             return;
         }
+        else if (type === 'ai') {
+            info('Cannot set state on analog input');
+            return;
+        }
+        else if (type === 'do') {
+            coilId = (group - 1) * 100 + (num - 1);
+            this._writeCoil(coilId, value);
+        } 
         else if (type === 'led' && group === 0) {
             coilId = num + this.groups[0].d0 + this.groups[0].di - 1;
+            this._writeCoil(coilId, value);
         }
+        else if (type === 'ao') {
+            // TODO: get AO register and set via _writeRegister()
+            registerId = num;
+            this._writeRegister(registerId, value);
+        }
+    }
 
-        // Actual write to the board.
+    _writeRegister(registerId, value, retries = 0) {
+        this.client.writeRegister(registerId, value);
+        
+        // Writing can sometimes fail, especially on boards connected over a (bad) UART connection. Validating the write
+        // and retrying the write after a small delay mitigates the problem.
+        if (retries < 5) {
+            setTimeout(() => {
+                if (Boolean(this.getState(registerId)) !== value) {
+                    retries++;
+                    console.log('Retry (' + retries + ')');
+                    this._writeRegister(registerId, value, retries);
+                }
+            }, (100 * (retries + 1)));
+        }
+    }
+
+    /**
+     * Actual write to the board DOs and LEDs.
+     * 
+     * @param {any} coilId 
+     * @param {any} value 
+     * @memberof Board
+     */
+    _writeCoil(coilId, value, retries = 0) {
         this.client.writeCoil(coilId, value);
 
         // Writing can sometimes fail, especially on boards connected over a (bad) UART connection. Validating the write
         // and retrying the write after a small delay mitigates the problem.
         if (retries < 5) {
             setTimeout(() => {
-                if (Boolean(this.getState(id)) !== value) {
+                if (Boolean(this.getState(coilId)) !== value) {
                     retries++;
                     console.log('Retry (' + retries + ')');
-                    this.set(id, value, retries);
+                    this._writeCoil(coilId, value, retries);
                 }
             }, (100 * (retries + 1)));
         }

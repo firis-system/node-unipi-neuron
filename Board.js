@@ -161,27 +161,27 @@ class Board extends EventEmitter {
         }
         else if (type === 'do') {
             coilId = (group - 1) * 100 + (num - 1);
-            this._writeCoil(coilId, value);
+            this._writeCoil(coilId, id, value);
         } 
         else if (type === 'led' && group === 0) {
             coilId = num + this.groups[0].d0 + this.groups[0].di - 1;
-            this._writeCoil(coilId, value);
+            this._writeCoil(coilId, id, value);
         }
         else if (type === 'ao') {
             // TODO: get AO register and set via _writeRegister()
             registerId = num;
-            this._writeRegister(registerId, value);
+            this._writeRegister(registerId, id, value);
         }
     }
 
-    _writeRegister(registerId, value, retries = 0) {
+    _writeRegister(registerId, id, value, retries = 0) {
         this.client.writeRegister(registerId, value);
         
         // Writing can sometimes fail, especially on boards connected over a (bad) UART connection. Validating the write
         // and retrying the write after a small delay mitigates the problem.
         if (retries < 5) {
             setTimeout(() => {
-                if (Boolean(this.getState(registerId)) !== value) {
+                if (Boolean(this.getState(id)) !== value) {
                     retries++;
                     console.log('Retry (' + retries + ')');
                     this._writeRegister(registerId, value, retries);
@@ -197,14 +197,14 @@ class Board extends EventEmitter {
      * @param {any} value 
      * @memberof Board
      */
-    _writeCoil(coilId, value, retries = 0) {
+    _writeCoil(coilId, id, value, retries = 0) {
         this.client.writeCoil(coilId, value);
 
         // Writing can sometimes fail, especially on boards connected over a (bad) UART connection. Validating the write
         // and retrying the write after a small delay mitigates the problem.
         if (retries < 5) {
             setTimeout(() => {
-                if (Boolean(this.getState(coilId)) !== value) {
+                if (Boolean(this.getState(id)) !== value) {
                     retries++;
                     console.log('Retry (' + retries + ')');
                     this._writeCoil(coilId, value, retries);

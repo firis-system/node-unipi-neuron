@@ -84,15 +84,16 @@ class Board extends EventEmitter {
                             'ao': (parseInt(ext.slice(8, 16), 2)),
                             'serial': (parseInt(ext.slice(0, 4), 2)),
                         };
+                        // Add fixed registers
+                        if (id === 0 && i === 0) {
+                            // for main board
+                            this.groups[0].led = 4;
+                        }
                     }
                 });
             }
 
-            // Add fixed registers
-            if (id === 0) {
-                // for main board
-                this.groups[0].led = 4;
-            }
+            
         });
     }
 

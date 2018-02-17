@@ -122,7 +122,7 @@ class BoardManager extends EventEmitter {
      */
     set(id, value) {
         id = this.id(id);
-        this.neuron[id.board].set(id.id, value);
+        this.boards[id.board].set(id.id, value);
     }
 
     /**
@@ -133,7 +133,7 @@ class BoardManager extends EventEmitter {
      */
     getState(id) {
         id = this.id(id);
-        return this.neuron[id.board].getState(id.id);
+        return this.boards[id.board].getState(id.id);
     }
 
     /**
@@ -144,7 +144,7 @@ class BoardManager extends EventEmitter {
      */
     getCount(id) {
         id = this.id(id);
-        return this.neuron[id.board].getCount(id.id);
+        return this.boards[id.board].getCount(id.id);
     }
 
     /**
@@ -154,11 +154,11 @@ class BoardManager extends EventEmitter {
      */
     getAllStates() {
         let data = {};
-        for (let name in this.neuron) {
-            if (this.neuron.hasOwnProperty(name)) {
-                for (let id in this.neuron[name].state) {
-                    if (this.neuron[name].state.hasOwnProperty(id)) {
-                        data[name + '-' + id] = this.neuron[name].state[id];
+        for (let name in this.boards) {
+            if (this.boards.hasOwnProperty(name)) {
+                for (let id in this.boards[name].state) {
+                    if (this.boards[name].state.hasOwnProperty(id)) {
+                        data[name + '-' + id] = this.boards[name].state[id];
                     }
                 }
             }
@@ -173,11 +173,11 @@ class BoardManager extends EventEmitter {
      */
     getAllCounts() {
         let data = {};
-        for (let name in this.neuron) {
-            if (this.neuron.hasOwnProperty(name)) {
-                for (let id in this.neuron[name].counter) {
-                    if (this.neuron[name].counter.hasOwnProperty(id)) {
-                        data[name + '-' + id] = this.neuron[name].counter[id];
+        for (let name in this.boards) {
+            if (this.boards.hasOwnProperty(name)) {
+                for (let id in this.boards[name].counter) {
+                    if (this.boards[name].counter.hasOwnProperty(id)) {
+                        data[name + '-' + id] = this.boards[name].counter[id];
                     }
                 }
             }

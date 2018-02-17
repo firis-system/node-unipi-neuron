@@ -94,7 +94,7 @@ class BoardManager extends EventEmitter {
         });
 
         // Add the board to the neuron variable for later reference.
-        this.boads[name] = board;
+        this.boards[name] = board;
     }
 
     /**

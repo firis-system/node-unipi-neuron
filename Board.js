@@ -146,7 +146,7 @@ class Board extends EventEmitter {
         let num = arr[1];
         arr = arr[0].split('-');
         let pin = arr[0];
-        let type = pin.substring(0, arr.length - 1).toLowerCase();
+        let type = pin.substring(0, pin.length - 1).toLowerCase();
         let coilId;
         let registerId;
 

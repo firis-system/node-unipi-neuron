@@ -169,8 +169,8 @@ class Board extends EventEmitter {
         }
         else if (type === 'ao') {
             // TODO: get AO register and set via _writeRegister()
-            registerId = num;
-            this._writeRegister(registerId, id, value);
+            //registerId = num;
+            //this._writeRegister(registerId, id, value);
         }
     }
 
@@ -184,7 +184,7 @@ class Board extends EventEmitter {
                 if (Boolean(this.getState(id)) !== value) {
                     retries++;
                     console.log('Retry (' + retries + ')');
-                    this._writeRegister(registerId, value, retries);
+                    this._writeRegister(registerId, id, value, retries);
                 }
             }, (100 * (retries + 1)));
         }
@@ -207,7 +207,7 @@ class Board extends EventEmitter {
                 if (Boolean(this.getState(id)) !== value) {
                     retries++;
                     console.log('Retry (' + retries + ')');
-                    this._writeCoil(coilId, value, retries);
+                    this._writeCoil(coilId, id, value, retries);
                 }
             }, (100 * (retries + 1)));
         }

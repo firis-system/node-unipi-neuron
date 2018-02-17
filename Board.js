@@ -181,7 +181,7 @@ class Board extends EventEmitter {
         // and retrying the write after a small delay mitigates the problem.
         if (retries < 5) {
             setTimeout(() => {
-                if (Boolean(this.getState(id)) !== value) {
+                if (this.getState(id) != value) {
                     retries++;
                     console.log('Retry (' + retries + ')');
                     this._writeRegister(registerId, id, value, retries);
@@ -204,7 +204,7 @@ class Board extends EventEmitter {
         // and retrying the write after a small delay mitigates the problem.
         if (retries < 5) {
             setTimeout(() => {
-                if (Boolean(this.getState(id)) !== value) {
+                if (this.getState(id) != value) {
                     retries++;
                     console.log('Retry (' + retries + ')');
                     this._writeCoil(coilId, id, value, retries);

@@ -59,7 +59,7 @@ const getNeuronProperties = (ref, config) => {
 
         // get neuron's definition
         try {
-            neuron.model.def = YAML.safeLoad(fs.readFileSync(`${require.resolve('./')}/hw_definitions/${type}x.yaml`, {encoding: 'utf8'}));
+            neuron.model.def = YAML.safeLoad(fs.readFileSync(`${require.resolve('./').split('index.js').join()}/hw_definitions/${type}x.yaml`, {encoding: 'utf8'}));
         }
         catch (err) {
             error('Cannot access Neuron\'s definition: this machine is a unknown neuron !');

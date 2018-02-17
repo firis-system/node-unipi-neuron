@@ -47,7 +47,7 @@ const getNeuronProperties = (ref, config) => {
         const binary_sn = eeprom.slice(100, 104);
         //neuron.model.serial = '0x' + ('00000000' + ((endianness === 'LE') ? binary_sn.readInt32LE(0) : binary_sn.readInt32BE(0)).toString(16)).substr(-8);
         neuron.model.serial = (endianness === 'LE') ? binary_sn.readInt32LE(0) : binary_sn.readInt32BE(0);
-        neuron.model.groups = NEURON_MODELS_GROUPS[this.model.type[0]] || (config) ? config.groups : null || 0;
+        neuron.model.groups = NEURON_MODELS_GROUPS[neuron.model.type[0]] || (config) ? config.groups : null || 0;
         if (config) config.groups = neuron.model.groups;
     }
 

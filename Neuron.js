@@ -14,7 +14,7 @@ const error = debug('unipi-neuron:neuron:error');
  * Unipi Neuron models groups
  */
 const NEURON_MODELS_GROUPS = {
-    'S': 0,
+    'S': 1,
     'M': 2,
     'L': 3
 };

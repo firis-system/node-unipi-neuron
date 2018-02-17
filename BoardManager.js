@@ -36,6 +36,7 @@ class BoardManager extends EventEmitter {
      */
     constructor(config) {
         super();
+        this.boards = {};
 
         for (let i = 0; i < config.length; i++) {
             this.init(config[i]);

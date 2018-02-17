@@ -36,7 +36,6 @@ class BoardManager extends EventEmitter {
      */
     constructor(config) {
         super();
-        this.neuron = {};
 
         for (let i = 0; i < config.length; i++) {
             this.init(config[i]);
@@ -183,6 +182,10 @@ class BoardManager extends EventEmitter {
             }
         }
         return data;
+    }
+
+    static getNeuronProperties() {
+        return Neuron.getNeuronProperties();
     }
 
 }

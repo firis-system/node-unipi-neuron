@@ -300,6 +300,10 @@ class Board extends EventEmitter {
         }
     }
 
+    static getNeuronProperties() {
+        return Neuron.getNeuronProperties();
+    }
+
 }
 
 module.exports = Board;

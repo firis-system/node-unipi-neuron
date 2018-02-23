@@ -159,49 +159,50 @@ class BoardManager extends EventEmitter {
                 "error": 'Bad board address'
             };
         }
-
-        /**
-         * Gets all io's in all initiated neuron.
-         *
-         * @returns {{}}
-         */
-        getAllStates() {
-            let data = {};
-            for (let name in this.boards) {
-                if (this.boards.hasOwnProperty(name)) {
-                    for (let id in this.boards[name].state) {
-                        if (this.boards[name].state.hasOwnProperty(id)) {
-                            data[name + '-' + id] = this.boards[name].state[id];
-                        }
-                    }
-                }
-            }
-            return data;
-        }
-
-        /**
-         * Gets all io's in all initiated neuron.
-         *
-         * @returns {{}}
-         */
-        getAllCounts() {
-            let data = {};
-            for (let name in this.boards) {
-                if (this.boards.hasOwnProperty(name)) {
-                    for (let id in this.boards[name].counter) {
-                        if (this.boards[name].counter.hasOwnProperty(id)) {
-                            data[name + '-' + id] = this.boards[name].counter[id];
-                        }
-                    }
-                }
-            }
-            return data;
-        }
-
-        static getNeuronProperties() {
-            return Neuron.getNeuronProperties();
-        }
-
     }
 
-    module.exports = BoardManager;
+    /**
+     * Gets all io's in all initiated neuron.
+     *
+     * @returns {{}}
+     */
+    getAllStates() {
+        let data = {};
+        for (let name in this.boards) {
+            if (this.boards.hasOwnProperty(name)) {
+                for (let id in this.boards[name].state) {
+                    if (this.boards[name].state.hasOwnProperty(id)) {
+                        data[name + '-' + id] = this.boards[name].state[id];
+                    }
+                }
+            }
+        }
+        return data;
+    }
+
+    /**
+     * Gets all io's in all initiated neuron.
+     *
+     * @returns {{}}
+     */
+    getAllCounts() {
+        let data = {};
+        for (let name in this.boards) {
+            if (this.boards.hasOwnProperty(name)) {
+                for (let id in this.boards[name].counter) {
+                    if (this.boards[name].counter.hasOwnProperty(id)) {
+                        data[name + '-' + id] = this.boards[name].counter[id];
+                    }
+                }
+            }
+        }
+        return data;
+    }
+
+    static getNeuronProperties() {
+        return Neuron.getNeuronProperties();
+    }
+
+}
+
+module.exports = BoardManager;

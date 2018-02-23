@@ -146,7 +146,7 @@ class Board extends EventEmitter {
         this.validate(id);
 
         let arr = id.split('.');
-        let group = arr[0].substr(arr[0].length - 1, 1);
+        let group = parseInt(arr[0].substr(arr[0].length - 1, 1));
         let num = arr[1];
         arr = arr[0].split('-');
         let pin = arr[0];
@@ -164,7 +164,7 @@ class Board extends EventEmitter {
         } else if (type === 'do') {
             coilId = (group - 1) * 100 + (num - 1);
             this._writeCoil(coilId, id, value);
-        } else if (type === 'led' && group === 0) {
+        } else if (type === 'led' && group === 1) {
             coilId = num + this.groups[0].d0 + this.groups[0].di - 1;
             this._writeCoil(coilId, id, value);
         } else if (type === 'ao') {
@@ -227,7 +227,7 @@ class Board extends EventEmitter {
     }
 
     /**
-     * Convert and store the given group array data in the data variable.
+     * Convert and store the given group array data in the data variable for DI/DO.
      *
      * @param prefix
      *   The io prefix (e.g. DO, DI ...)
@@ -236,7 +236,7 @@ class Board extends EventEmitter {
      * @param length
      *   The length of the io group, defaults to 16.
      */
-    storeState(prefix, value, length = 16) {
+    storeDigitalState(prefix, value, length = 16) {
         const bin = this.dec2bin(value);
 
         // Convert to an array and reverse the values (first bit -> first value)
@@ -256,7 +256,7 @@ class Board extends EventEmitter {
     }
 
     /**
-     * Convert and store the given group analogue data in the data variable.
+     * Convert and store the given group analogue data in the data variable for AI/AO.
      * 
      * @param {any} prefix 
      * @param {any} group 
@@ -349,8 +349,8 @@ class Board extends EventEmitter {
                     if (errdesc) error(errdesc);
                     else error(err);
                 } else {
-                    this.storeState('DI' + group.id, data.data[0], group.di);
-                    this.storeState('DO' + group.id, data.data[1], group.do);
+                    this.storeDigitalState('DI' + group.id, data.data[0], group.di);
+                    this.storeDigitalState('DO' + group.id, data.data[1], group.do);
                 }
             });
             // Read LED states
@@ -361,7 +361,7 @@ class Board extends EventEmitter {
                         if (errdesc) error(errdesc);
                         else error(err);
                     } else {
-                        this.storeState('LED' + group.id, data.data[0], group.led);
+                        this.storeDigitalState('LED' + group.id, data.data[0], group.led);
                     }
                 });
             }

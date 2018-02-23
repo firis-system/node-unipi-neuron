@@ -133,7 +133,14 @@ class BoardManager extends EventEmitter {
      */
     getState(id) {
         id = this.id(id);
-        return this.boards[id.board].getState(id.id);
+        try {
+            return this.boards[id.board].getState(id.id);
+        } catch (err) {
+            error('Bad board address');
+            return {
+                "error": 'Bad board address'
+            };
+        }
     }
 
     /**
@@ -145,6 +152,14 @@ class BoardManager extends EventEmitter {
     getCount(id) {
         id = this.id(id);
         return this.boards[id.board].getCount(id.id);
+    }
+    catch (err) {
+        try {
+            error('Bad board address');
+            return {
+                "error": 'Bad board address'
+            };
+        }
     }
 
     /**

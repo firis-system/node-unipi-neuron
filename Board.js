@@ -13,7 +13,7 @@ const error = debug('unipi-neuron:board:error');
  * Modbus exceptions codes
  */
 
-const MODUS_ERRNO = {
+const MODBUS_ERRNO = {
     0x01: "Illegal Function",
     0x02: "Illegal Data Address",
     0x03: "Illegal Data Value",
@@ -68,7 +68,7 @@ class Board extends EventEmitter {
                 let start = 1001 + (i * 100);
                 this.client.readHoldingRegisters(start, 2, (err, data) => {
                     if (err) {
-                        const errdesc = MODUS_ERRNO[parseInt(err.message.split(' ')[-1])];
+                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ')[-1])];
                         if (errdesc) error(errdesc);
                         else error(err);
                     } else {
@@ -345,7 +345,7 @@ class Board extends EventEmitter {
             // Read DI and DO states
             this.client.readHoldingRegisters(start, 2, (err, data) => {
                 if (err) {
-                    const errdesc = MODUS_ERRNO[parseInt(err.message.split(' ')[-1])];
+                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ')[-1])];
                     if (errdesc) error(errdesc);
                     else error(err);
                 } else {
@@ -357,7 +357,7 @@ class Board extends EventEmitter {
             if (group.id === 1) {
                 this.client.readHoldingRegisters(20, 1, (err, data) => {
                     if (err) {
-                        const errdesc = MODUS_ERRNO[parseInt(err.message.split(' ')[-1])];
+                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ')[-1])];
                         if (errdesc) error(errdesc);
                         else error(err);
                     } else {
@@ -369,7 +369,7 @@ class Board extends EventEmitter {
             if (group.id === 1) {
                 this.client.readHoldingRegisters(2, 2, (err, data) => {
                     if (err) {
-                        const errdesc = MODUS_ERRNO[parseInt(err.message.split(' ')[-1])];
+                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ')[-1])];
                         if (errdesc) error(errdesc);
                         else error(err);
                     } else {
@@ -393,7 +393,7 @@ class Board extends EventEmitter {
             // Read DI counters
             this.client.readHoldingRegisters(countStart[i], (group.di * 2), (err, data) => {
                 if (err) {
-                    const errdesc = MODUS_ERRNO[parseInt(err.message.split(' ')[-1])];
+                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ')[-1])];
                     if (errdesc) error(errdesc);
                     else error(err);
                 } else {

@@ -151,59 +151,57 @@ class BoardManager extends EventEmitter {
      */
     getCount(id) {
         id = this.id(id);
-        return this.boards[id.board].getCount(id.id);
-    }
-    catch (err) {
         try {
+            return this.boards[id.board].getCount(id.id);
+        } catch (err) {
             error('Bad board address');
             return {
                 "error": 'Bad board address'
             };
         }
-    }
 
-    /**
-     * Gets all io's in all initiated neuron.
-     *
-     * @returns {{}}
-     */
-    getAllStates() {
-        let data = {};
-        for (let name in this.boards) {
-            if (this.boards.hasOwnProperty(name)) {
-                for (let id in this.boards[name].state) {
-                    if (this.boards[name].state.hasOwnProperty(id)) {
-                        data[name + '-' + id] = this.boards[name].state[id];
+        /**
+         * Gets all io's in all initiated neuron.
+         *
+         * @returns {{}}
+         */
+        getAllStates() {
+            let data = {};
+            for (let name in this.boards) {
+                if (this.boards.hasOwnProperty(name)) {
+                    for (let id in this.boards[name].state) {
+                        if (this.boards[name].state.hasOwnProperty(id)) {
+                            data[name + '-' + id] = this.boards[name].state[id];
+                        }
                     }
                 }
             }
+            return data;
         }
-        return data;
-    }
 
-    /**
-     * Gets all io's in all initiated neuron.
-     *
-     * @returns {{}}
-     */
-    getAllCounts() {
-        let data = {};
-        for (let name in this.boards) {
-            if (this.boards.hasOwnProperty(name)) {
-                for (let id in this.boards[name].counter) {
-                    if (this.boards[name].counter.hasOwnProperty(id)) {
-                        data[name + '-' + id] = this.boards[name].counter[id];
+        /**
+         * Gets all io's in all initiated neuron.
+         *
+         * @returns {{}}
+         */
+        getAllCounts() {
+            let data = {};
+            for (let name in this.boards) {
+                if (this.boards.hasOwnProperty(name)) {
+                    for (let id in this.boards[name].counter) {
+                        if (this.boards[name].counter.hasOwnProperty(id)) {
+                            data[name + '-' + id] = this.boards[name].counter[id];
+                        }
                     }
                 }
             }
+            return data;
         }
-        return data;
+
+        static getNeuronProperties() {
+            return Neuron.getNeuronProperties();
+        }
+
     }
 
-    static getNeuronProperties() {
-        return Neuron.getNeuronProperties();
-    }
-
-}
-
-module.exports = BoardManager;
+    module.exports = BoardManager;

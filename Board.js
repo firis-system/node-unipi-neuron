@@ -53,7 +53,7 @@ class Board extends EventEmitter {
         this.id = id;
 
         // try to guess neuron model and set the config.groups accordinaly
-        if (id === 0) {
+        if (client.port && id === 0) {
             Neuron.getNeuronProperties(this);
         }
 
@@ -73,27 +73,31 @@ class Board extends EventEmitter {
                         else error(err);
                     } else {
                         let bin = this.dec2bin(data.data[0]);
-                        let ext = this.dec2bin(data.data[1]);
+                        /// Cannot calc AO AI and SERIAL numbers, unknown bitwise operation to apply to modbus reading ???
+                        /// TODO: better parsing hw_definitions files from evok !
+                        //let ext = this.dec2bin(data.data[1]);
                         // On first register adress : first eight bits are for the input number, second eight bits are for the output number.
                         // On second register address : first four bits are for the serial port number, second four bits are for the analog input number, third eight bits are for the analog output number.
                         this.groups[i] = {
                             'id': (i + 1),
                             'di': (parseInt(bin.slice(0, 8), 2)),
                             'do': (parseInt(bin.slice(8, 16), 2)),
-                            'ai': (parseInt(ext.slice(4, 8), 2)),
-                            'ao': (parseInt(ext.slice(8, 16), 2)),
-                            'serial': (parseInt(ext.slice(0, 4), 2)),
+                            //'ao': (parseInt(ext.slice(4, 8), 2)),
+                            //'ai': (parseInt(ext.slice(8, 16), 2)),
+                            //'serial': (parseInt(ext.slice(0, 4), 2)),
                         };
                         // Add fixed registers
                         if (id === 0 && i === 0) {
                             // for main board
                             this.groups[0].led = 4;
+                            this.groups[0].ai = 1;
+                            this.groups[0].ao = 1;
                         }
                     }
                 });
             }
 
-            
+
         });
     }
 
@@ -154,20 +158,16 @@ class Board extends EventEmitter {
         if (type === 'di') {
             info('Cannot set state on digital input');
             return;
-        }
-        else if (type === 'ai') {
+        } else if (type === 'ai') {
             info('Cannot set state on analog input');
             return;
-        }
-        else if (type === 'do') {
+        } else if (type === 'do') {
             coilId = (group - 1) * 100 + (num - 1);
             this._writeCoil(coilId, id, value);
-        } 
-        else if (type === 'led' && group === 0) {
+        } else if (type === 'led' && group === 0) {
             coilId = num + this.groups[0].d0 + this.groups[0].di - 1;
             this._writeCoil(coilId, id, value);
-        }
-        else if (type === 'ao') {
+        } else if (type === 'ao') {
             // TODO: get AO register and set via _writeRegister()
             //registerId = num;
             //this._writeRegister(registerId, id, value);
@@ -176,7 +176,7 @@ class Board extends EventEmitter {
 
     _writeRegister(registerId, id, value, retries = 0) {
         this.client.writeRegister(registerId, value);
-        
+
         // Writing can sometimes fail, especially on boards connected over a (bad) UART connection. Validating the write
         // and retrying the write after a small delay mitigates the problem.
         if (retries < 5) {
@@ -237,19 +237,99 @@ class Board extends EventEmitter {
      *   The length of the io group, defaults to 16.
      */
     storeState(prefix, value, length = 16) {
-        let bin = this.dec2bin(value);
+        const bin = this.dec2bin(value);
 
         // Convert to an array and reverse the values (first bit -> first value)
-        let arr = bin.split('').reverse();
+        const arr = bin.split('').reverse();
 
         for (let i = 0; i < length; i++) {
-            let id = prefix + '.' + (i + 1);
-            let value = parseInt(arr[i]);
-            let currentValue = this.getState(id);
+            const id = prefix + '.' + (i + 1);
+            const value = parseInt(arr[i]);
+            const currentValue = this.getState(id);
             if (currentValue !== value) {
                 this.state[id] = value;
                 if (currentValue !== undefined) {
                     this.emit('update', id, value.toString());
+                }
+            }
+        }
+    }
+
+    /**
+     * Convert and store the given group analogue data in the data variable.
+     * 
+     * @param {any} prefix 
+     * @param {any} group 
+     * @param {any} id 
+     * @param {any} value 
+     * @memberof Board
+     */
+    storeAnalogueState(prefix, group, id, value) {
+        let mode = 0;
+        let vref = 0;
+        let vrefInt = 0;
+        let offset = 0;
+        let dev = 0;
+
+        if (group === 1) {
+            // Get mode (3 = resistance, 1 = current, 0 = voltage)
+            this.client.readHoldingRegisters(1019, 1)
+                .then(data => {
+                    mode = data.data[0];
+                    // Get Vref
+                    return this.client.readHoldingRegisters(1009, 1);
+                })
+                .then(data => {
+                    vref = data.data[0];
+                    // Get vrefInt
+                    return this.client.readHoldingRegisters(5, 1);
+                })
+                .then(data => {
+                    vrefInt = data.data[0];
+                    // Get offest and deviation
+                    if (mode !== 1) {
+                        return this.client.readHoldingRegisters(1020 + ((prefix === 'AO') ? 0 : 5), 2);
+                    } else if (mode === 1 && group === 1) {
+                        return this.client.readHoldingRegisters(1022 + ((prefix === 'AO') ? 0 : 5), 2);
+                    }
+                })
+                .then(data => {
+                    dev = data.data[0];
+                    offset = data.data[1];
+                    // Calc result (Neuron technical manual p.16)
+                    const result = (3.3 * (vref / vrefInt)) * ((mode === 0) ? 3 : (mode === 1) ? 10 : 1) * (value / 4096) * (1 + (dev / 10000)) + (offset / 1000);
+                    const currentValue = this.getState(id);
+                    if (currentValue !== result) {
+                        this.state[`${prefix}${group}.${id}`] = result;
+                        if (currentValue !== undefined) {
+                            this.emit('update', id, result);
+                        }
+                    }
+                })
+                .catch(err => error);
+        } else {
+            if (prefix === 'AO') {
+                // convert to real value (Neuron technical manual p.18)
+                // TODO : check if there are no binary operation to convert the actual value
+                /** 
+                 * // evok source extract
+                 *
+                 * byte_arr = bytearray(4)
+                 * byte_arr[2] = (self.regvalue() >> 8) & 255
+				 * byte_arr[3] = self.regvalue() & 255
+				 * byte_arr[0] = (self.arm.neuron.modbus_cache_map.get_register(1, self.valreg + 1, unit=self.arm.modbus_address)[0] >> 8) & 255
+				 * byte_arr[1] = self.arm.neuron.modbus_cache_map.get_register(1, self.valreg + 1, unit=self.arm.modbus_address)[0] & 255
+				 * return struct.unpack('>f', str(byte_arr))[0]
+                 */
+                const result = value / 4000 * 10;
+            } else {
+                // TODO : check if there are no binary operation to convert the actual value
+                const currentValue = this.getState(id);
+                if (currentValue !== value) {
+                    this.state[`${prefix}${group}.${id}`] = value;
+                    if (currentValue !== undefined) {
+                        this.emit('update', id, value);
+                    }
                 }
             }
         }
@@ -273,6 +353,31 @@ class Board extends EventEmitter {
                     this.storeState('DO' + group.id, data.data[1], group.do);
                 }
             });
+            // Read LED states
+            if (group.id === 1) {
+                this.client.readHoldingRegisters(20, 1, (err, data) => {
+                    if (err) {
+                        const errdesc = MODUS_ERRNO[parseInt(err.message.split(' ')[-1])];
+                        if (errdesc) error(errdesc);
+                        else error(err);
+                    } else {
+                        this.storeState('LED' + group.id, data.data[0], group.led);
+                    }
+                });
+            }
+            // Read AO and AI states (only on group 1 and not x5xx series for now)
+            if (group.id === 1) {
+                this.client.readHoldingRegisters(2, 2, (err, data) => {
+                    if (err) {
+                        const errdesc = MODUS_ERRNO[parseInt(err.message.split(' ')[-1])];
+                        if (errdesc) error(errdesc);
+                        else error(err);
+                    } else {
+                        this.storeAnalogueState('AO', group.id, 1, data.data[0]);
+                        this.storeAnalogueState('AI', group.id, 1, data.data[1]);
+                    }
+                });
+            }
         }
     }
 

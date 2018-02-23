@@ -15,8 +15,8 @@ class TcpConnection extends ModbusRTU {
      */
     constructor (ip, port) {
         super();
-        this.ip = ip;
-        this.port = port;
+        this.ip = ip || "127.0.0.1";
+        this.port = port || 502;
     }
 
     /**

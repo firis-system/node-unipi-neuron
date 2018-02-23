@@ -62,7 +62,7 @@ class BoardManager extends EventEmitter {
         }
 
         // try to guess neuron model and set the config.groups accordinaly
-        if (id === 0 && name === 'local') {
+        if (config.type === 'tcp' && id === 0 && name === 'local') {
             Neuron.getNeuronProperties(this, config);
         }
 

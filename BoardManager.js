@@ -7,13 +7,13 @@ const TcpConnection = require("./TcpConnection");
 const Neuron = require('./Neuron');
 
 const debug = require('debug');
-const info = debug('unipi-neuron:neuron:info');
-const warn = debug('unipi-neuron:neuron:warn');
-const log = debug('unipi-neuron:neuron:log');
-const error = debug('unipi-neuron:neuron:error');
+const info = debug('unipi-boards:boards:info');
+const warn = debug('unipi-boards:boards:warn');
+const log = debug('unipi-boards:boards:log');
+const error = debug('unipi-boards:boards:error');
 
 /**
- * The board managers initiates neuron based on the given config.
+ * The board managers initiates boards based on the given config.
  * 
  * @class BoardManager
  * @extends {EventEmitter}
@@ -31,12 +31,16 @@ class BoardManager extends EventEmitter {
      *     - port: '502' (if type is tcp)
      *     - socket: '/dev/extcomm/0/0' (if type is socket)
      *     - id: 15 (if type is socket)
-     *     - groups: 3 (Normally 1 for S type and extension neuron, 2 for M type neuron and 3 for L type neuron)
+     *     - groups: 3 (Normally 1 for S type and extension boards, 2 for M type boards and 3 for L type boards)
      *     - interval: 100 (The interval in milliseconds at which to update the board values)
      */
     constructor(config) {
         super();
         this.boards = {};
+
+        if (config == null || config.length === 0) {
+            config = [{}];
+        }
 
         for (let i = 0; i < config.length; i++) {
             this.init(config[i]);
@@ -54,13 +58,12 @@ class BoardManager extends EventEmitter {
         let id = 0;
         let connection = {};
 
-        if (config.name) {
-            name = config.name;
-        }
-        if (config.id) {
-            id = config.id;
-        }
-
+        name = config.name || name;
+        id = config.id || id;
+        config.type = config.type || 'tcp';
+        config.port = config.port || 502;
+        config.ip = config.ip || '127.0.0.1';
+        
         // Switch between tcp and rtu connections.
         switch (config.type) {
             case 'tcp':
@@ -89,7 +92,7 @@ class BoardManager extends EventEmitter {
             this.emit('update', name + '-' + id, value);
         });
 
-        // Add the board to the neuron variable for later reference.
+        // Add the board to the boards variable for later reference.
         this.boards[name] = board;
     }
 
@@ -157,7 +160,7 @@ class BoardManager extends EventEmitter {
     }
 
     /**
-     * Gets all io's in all initiated neuron.
+     * Gets all io's in all initiated boards.
      *
      * @returns {{}}
      */
@@ -176,7 +179,7 @@ class BoardManager extends EventEmitter {
     }
 
     /**
-     * Gets all io's in all initiated neuron.
+     * Gets all io's in all initiated boards.
      *
      * @returns {{}}
      */
@@ -192,10 +195,6 @@ class BoardManager extends EventEmitter {
             }
         }
         return data;
-    }
-
-    static getNeuronProperties() {
-        return Neuron.getNeuronProperties();
     }
 
 }

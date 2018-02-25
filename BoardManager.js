@@ -54,23 +54,22 @@ class BoardManager extends EventEmitter {
      *   A single object from the constructor config array.
      */
     init(config) {
-        let name = 'local';
-        let id = 0;
         let connection = {};
-
-        name = config.name || name;
-        id = config.id || id;
+        let name = config.name || 'local';
+        config.interval = config.interval || 10;
+        let id = config.id || 0;
         config.type = config.type || 'tcp';
-        config.port = config.port || 502;
-        config.ip = config.ip || '127.0.0.1';
         
         // Switch between tcp and rtu connections.
         switch (config.type) {
             case 'tcp':
+                config.port = config.port || 502;
+                config.ip = config.ip || '127.0.0.1';
                 connection = new TcpConnection(config.ip, config.port);
                 break;
 
             default:
+                config.socket = config.socket || '/dev/extcomm/0/0';
                 connection = new RtuConnection(config.socket);
         }
 

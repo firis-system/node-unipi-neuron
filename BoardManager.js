@@ -61,11 +61,6 @@ class BoardManager extends EventEmitter {
             id = config.id;
         }
 
-        // try to guess neuron model and set the config.groups accordinaly
-        if (config.type === 'tcp' && id === 0 && name === 'local') {
-            Neuron.getNeuronProperties(this, config);
-        }
-
         // Switch between tcp and rtu connections.
         switch (config.type) {
             case 'tcp':

@@ -58,6 +58,7 @@ class Board extends EventEmitter {
            if (neuron && neuron.model) {
                this.model = neuron.model;
                groups = neuron.model.groups;
+           }
         }
 
         // Connect to the board.

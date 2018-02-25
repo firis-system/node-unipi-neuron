@@ -54,7 +54,10 @@ class Board extends EventEmitter {
 
         // try to guess neuron model and set the config.groups accordinaly
         if (client.port && id === 0) {
-            Neuron.getNeuronProperties(this);
+           const neuron = Neuron.getNeuronProperties();
+           if (neuron && neuron.model) {
+               this.model = neuron.model;
+               groups = neuron.model.groups;
         }
 
         // Connect to the board.
@@ -297,7 +300,11 @@ class Board extends EventEmitter {
                     dev = data.data[0];
                     offset = data.data[1];
                     // Calc result (Neuron technical manual p.16)
-                    const result = (3.3 * (vref / vrefInt)) * ((mode === 0) ? 3 : (mode === 1) ? 10 : 1) * (value / 4096) * (1 + (dev / 10000)) + (offset / 1000);
+                    const result =
+                        (3.3 * (vref / vrefInt)) *
+                        ((mode === 0) ? 3 : (mode === 1) ? 10 : 1) *
+                        (value / 4096) *
+                        (1 + (dev / 10000)) + (offset / 1000);
                     const currentValue = this.getState(id);
                     if (currentValue !== result) {
                         this.state[`${prefix}${group}.${id}`] = result;
@@ -308,30 +315,19 @@ class Board extends EventEmitter {
                 })
                 .catch(err => error);
         } else {
+            // TODO : check if there are no binary operation to convert the actual value
             if (prefix === 'AO') {
                 // convert to real value (Neuron technical manual p.18)
-                // TODO : check if there are no binary operation to convert the actual value
-                /** 
-                 * // evok source extract
-                 *
-                 * byte_arr = bytearray(4)
-                 * byte_arr[2] = (self.regvalue() >> 8) & 255
-				 * byte_arr[3] = self.regvalue() & 255
-				 * byte_arr[0] = (self.arm.neuron.modbus_cache_map.get_register(1, self.valreg + 1, unit=self.arm.modbus_address)[0] >> 8) & 255
-				 * byte_arr[1] = self.arm.neuron.modbus_cache_map.get_register(1, self.valreg + 1, unit=self.arm.modbus_address)[0] & 255
-				 * return struct.unpack('>f', str(byte_arr))[0]
-                 */
-                const result = value / 4000 * 10;
-            } else {
-                // TODO : check if there are no binary operation to convert the actual value
-                const currentValue = this.getState(id);
-                if (currentValue !== value) {
-                    this.state[`${prefix}${group}.${id}`] = value;
-                    if (currentValue !== undefined) {
-                        this.emit('update', id, value);
-                    }
+                value = value / 4000 * 10;
+            }
+            const currentValue = this.getState(id);
+            if (currentValue !== value) {
+                this.state[`${prefix}${group}.${id}`] = value;
+                if (currentValue !== undefined) {
+                    this.emit('update', id, value);
                 }
             }
+
         }
     }
 

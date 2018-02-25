@@ -169,7 +169,7 @@ class Board extends EventEmitter {
             coilId = (group - 1) * 100 + (num - 1);
             this._writeCoil(coilId, id, value);
         } else if (type === 'led' && group === 1) {
-            coilId = num + this.groups[0].d0 + this.groups[0].di - 1;
+            coilId = this.groups[0].d0 + this.groups[0].di + (num - 1);
             this._writeCoil(coilId, id, value);
         } else if (type === 'ao') {
             // TODO: get AO register and set via _writeRegister()
@@ -358,6 +358,7 @@ class Board extends EventEmitter {
                         if (errdesc) error(errdesc);
                         else error(err);
                     } else {
+                        info('LED register value')
                         this.storeDigitalState('LED' + group.id, data.data[0], group.led);
                     }
                 });

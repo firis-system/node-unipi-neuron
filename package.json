@@ -4,7 +4,7 @@
   "description": "Integrates the UniPi Neuron product line in Node.js.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "setup": "npm i --build-from-source --unsafe-perm"
   },
   "dependencies": {
     "js-yaml": "^3.10.0",

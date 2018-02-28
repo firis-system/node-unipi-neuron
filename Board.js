@@ -2,6 +2,8 @@
 
 const EventEmitter = require('events').EventEmitter;
 const Neuron = require('./Neuron');
+const RtuConnection = require("./RtuConnection");
+const TcpConnection = require("./TcpConnection");
 
 const debug = require('debug');
 const info = debug('unipi-neuron:board:info');
@@ -37,28 +39,54 @@ class Board extends EventEmitter {
     /**
      * Create a single board.
      *
-     * @param client
-     *   A TCP or RTU connection object.
-     * @param id
+     * @param config.type
+     *   A TCP or RTU connection type.
+     * @param config.id
      *   The board id to connect to.
-     * @param groups
+     * @param config.groups
      *   The number of groups.
+     * @param config.
      */
-    constructor(client, id, groups) {
+    constructor(config) {
         super();
-        this.client = client;
+
+        config.interval = config.interval || 10;
+        config.id = config.id || 0;
+        if (config.id === 0) config.name = config.name || 'local';
+        else config.name = config.name || config.id.toString();
+        config.type = config.type || 'tcp';
+
+        // Switch between tcp and rtu connections.
+        switch (config.type) {
+            case 'tcp':
+                config.port = config.port || 502;
+                config.ip = config.ip || '127.0.0.1';
+                this.client = new TcpConnection(config.ip, config.port);
+                break;
+
+            default:
+                config.socket = config.socket || '/dev/extcomm/0/0';
+                this.client = new RtuConnection(config.socket);
+        }
+
+        const name = config.name;
+        const id = config.id;
+        const client = this.client;
+        let groups = config.groups;
+
         this.state = {};
         this.counter = {};
         this.groups = [];
-        this.id = id;
+        this.id = id || 0;
+        this.name = name || 'local';
 
         // try to guess neuron model and set the config.groups accordinaly
         if (client.port && id === 0) {
-           const neuron = Neuron.getNeuronProperties();
-           if (neuron && neuron.model) {
-               this.model = neuron.model;
-               groups = neuron.model.groups;
-           }
+            const neuron = Neuron.getNeuronProperties();
+            if (neuron && neuron.model) {
+                this.model = neuron.model;
+                groups = neuron.model.groups;
+            }
         }
 
         // Connect to the board.
@@ -101,6 +129,15 @@ class Board extends EventEmitter {
                 });
             }
 
+            // Update the board state according to the config interval.
+            this.updateStateLoopId = setInterval(() => {
+                this.updateState();
+            }, config.interval);
+
+            // Update the board count according to the config interval (times five).
+            this.updateCountLoopId = setInterval(() => {
+                this.updateCount();
+            }, (config.interval * 5));
 
         });
     }
@@ -179,7 +216,13 @@ class Board extends EventEmitter {
     }
 
     _writeRegister(registerId, id, value, retries = 0) {
-        this.client.writeRegister(registerId, value);
+        this.client.writeRegister(registerId, value)
+            .catch(err => {
+                warn(`Cannot write ${value} to register ${registerId} (pin: ${id}) on board ${this.name}`);
+                const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                if (errdesc) error(errdesc);
+                else error(err);
+            });
 
         // Writing can sometimes fail, especially on boards connected over a (bad) UART connection. Validating the write
         // and retrying the write after a small delay mitigates the problem.
@@ -202,7 +245,13 @@ class Board extends EventEmitter {
      * @memberof Board
      */
     _writeCoil(coilId, id, value, retries = 0) {
-        this.client.writeCoil(coilId, value);
+        this.client.writeCoil(coilId, value)
+            .catch(err => {
+                warn(`Cannot write ${value} to coil ${coilId} (pin: ${id}) on board ${this.name}`);
+                const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                if (errdesc) error(errdesc);
+                else error(err);
+            });
 
         // Writing can sometimes fail, especially on boards connected over a (bad) UART connection. Validating the write
         // and retrying the write after a small delay mitigates the problem.
@@ -314,7 +363,11 @@ class Board extends EventEmitter {
                         }
                     }
                 })
-                .catch(err => error);
+                .catch( err => {
+                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                    if (errdesc) error(errdesc);
+                    else error(err);
+                });
         } else {
             // TODO : check if there are no binary operation to convert the actual value
             if (prefix === 'AO') {
@@ -340,41 +393,40 @@ class Board extends EventEmitter {
             let group = this.groups[i];
             let start = (group.id - 1) * 100;
             // Read DI and DO states
-            this.client.readHoldingRegisters(start, 2, (err, data) => {
-                if (err) {
-                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ')[-1])];
-                    if (errdesc) error(errdesc);
-                    else error(err);
-                } else {
+            this.client.readHoldingRegisters(start, 2)
+                .then( data => {
                     this.storeDigitalState('DI' + group.id, data.data[0], group.di);
                     this.storeDigitalState('DO' + group.id, data.data[1], group.do);
-                }
-            });
+                })
+                .catch( err => {
+                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                    if (errdesc) error(errdesc);
+                    else error(err);
+                });
             // Read LED states
             if (group.id === 1) {
-                this.client.readHoldingRegisters(20, 1, (err, data) => {
-                    if (err) {
-                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ')[-1])];
+                this.client.readHoldingRegisters(20, 1)
+                    .then( data => {
+                        this.storeDigitalState('LED' + group.id, data.data[0], group.led);
+                    })
+                    .catch( err => {
+                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
                         if (errdesc) error(errdesc);
                         else error(err);
-                    } else {
-                        info('LED register value')
-                        this.storeDigitalState('LED' + group.id, data.data[0], group.led);
-                    }
-                });
+                    });
             }
             // Read AO and AI states (only on group 1 and not x5xx series for now)
             if (group.id === 1) {
-                this.client.readHoldingRegisters(2, 2, (err, data) => {
-                    if (err) {
-                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ')[-1])];
-                        if (errdesc) error(errdesc);
-                        else error(err);
-                    } else {
+                this.client.readHoldingRegisters(2, 2)
+                    .then( data => {
                         this.storeAnalogueState('AO', group.id, 1, data.data[0]);
                         this.storeAnalogueState('AI', group.id, 1, data.data[1]);
-                    }
-                });
+                    })
+                    .catch( err => {
+                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                        if (errdesc) error(errdesc);
+                        else error(err);
+                    });
             }
         }
     }
@@ -389,19 +441,19 @@ class Board extends EventEmitter {
         for (let i = 0; i < this.groups.length; i++) {
             let group = this.groups[i];
             // Read DI counters
-            this.client.readHoldingRegisters(countStart[i], (group.di * 2), (err, data) => {
-                if (err) {
-                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ')[-1])];
-                    if (errdesc) error(errdesc);
-                    else error(err);
-                } else {
+            this.client.readHoldingRegisters(countStart[i], (group.di * 2))
+                .then( data => {
                     for (let j = 0; j < group.di; j++) {
                         let id = 'DI' + group.id + '.' + (j + 1);
                         // Counters are stored over two words.
                         this.counter[id] = data.data[j * 2] + data.data[j * 2 + 1];
                     }
-                }
-            });
+                })
+                .catch( err => {
+                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                    if (errdesc) error(errdesc);
+                    else error(err);
+                });
         }
     }
 

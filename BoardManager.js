@@ -2,8 +2,6 @@
 
 const EventEmitter = require("events").EventEmitter;
 const Board = require("./Board");
-const RtuConnection = require("./RtuConnection");
-const TcpConnection = require("./TcpConnection");
 const Neuron = require('./Neuron');
 
 const debug = require('debug');
@@ -54,37 +52,17 @@ class BoardManager extends EventEmitter {
      *   A single object from the constructor config array.
      */
     init(config) {
-        let connection = {};
-        let name = config.name || 'local';
         config.interval = config.interval || 10;
-        let id = config.id || 0;
+        config.id = config.id || 0;
+        if (config.id === 0) config.name = config.name || 'local';
+        else config.name = config.name || config.id.toString();
         config.type = config.type || 'tcp';
-        
-        // Switch between tcp and rtu connections.
-        switch (config.type) {
-            case 'tcp':
-                config.port = config.port || 502;
-                config.ip = config.ip || '127.0.0.1';
-                connection = new TcpConnection(config.ip, config.port);
-                break;
 
-            default:
-                config.socket = config.socket || '/dev/extcomm/0/0';
-                connection = new RtuConnection(config.socket);
-        }
+        let name = config.name;
+        let id = config.id;
 
         // Create a new board
-        let board = new Board(connection, id, config.groups);
-
-        // Update the board state according to the config interval.
-        setInterval(() => {
-            board.updateState();
-        }, config.interval);
-
-        // Update the board count according to the config interval (times five).
-        setInterval(() => {
-            board.updateCount();
-        }, (config.interval * 5));
+        let board = new Board(config);
 
         // Forward the board update event.
         board.on('update', (id, value) => {

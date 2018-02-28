@@ -99,12 +99,8 @@ class Board extends EventEmitter {
                 // We can read the input and output capabilities of group one on register 1001, for group two on 1101
                 // and so on.
                 let start = 1001 + (i * 100);
-                this.client.readHoldingRegisters(start, 2, (err, data) => {
-                    if (err) {
-                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ')[-1])];
-                        if (errdesc) error(errdesc);
-                        else error(err);
-                    } else {
+                this.client.readHoldingRegisters(start, 2)
+                    .then(data => {
                         let bin = this.dec2bin(data.data[0]);
                         /// Cannot calc AO AI and SERIAL numbers, unknown bitwise operation to apply to modbus reading ???
                         /// TODO: better parsing hw_definitions files from evok !
@@ -126,8 +122,12 @@ class Board extends EventEmitter {
                             this.groups[0].ai = 1;
                             this.groups[0].ao = 1;
                         }
-                    }
-                });
+                    })
+                    .catch(err => {
+                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                        if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, ref: pins enums, register: ${start}, length: 2)`);
+                        else error(err);
+                    });
             }
 
             // Update the board state according to the config interval.
@@ -221,7 +221,7 @@ class Board extends EventEmitter {
             .catch(err => {
                 warn(`Cannot write ${value} to register ${registerId} (pin: ${id}) on board ${this.name}`);
                 const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
-                if (errdesc) error(errdesc);
+                if (errdesc) error(`ModBus::writeRegister Error: ${errdesc} (board: ${this.name}, ref: ${id}, register: ${registerId}, value: ${value})`);
                 else error(err);
             });
 
@@ -251,7 +251,7 @@ class Board extends EventEmitter {
                 warn(`Cannot write ${value} to coil ${coilId} (pin: ${id}) on board ${this.name}`);
                 const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
                 if (errdesc) error(errdesc);
-                else error(err);
+                else error(`ModBus::writeCoil Error: ${errdesc} (board: ${this.name}, ref: ${id}, coil: ${coilId}, value: ${value})`);
             });
 
         // Writing can sometimes fail, especially on boards connected over a (bad) UART connection. Validating the write
@@ -333,10 +333,20 @@ class Board extends EventEmitter {
                     // Get Vref
                     return this.client.readHoldingRegisters(1009, 1);
                 })
+                .catch( err => {
+                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                    if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, ref: vref, register: 1019, length: 1)`);
+                    else error(err);
+                })
                 .then(data => {
                     vref = data.data[0];
                     // Get vrefInt
                     return this.client.readHoldingRegisters(5, 1);
+                })
+                .catch( err => {
+                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                    if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, ref: vrefInt, register: 5, length: 1)`);
+                    else error(err);
                 })
                 .then(data => {
                     vrefInt = data.data[0];
@@ -346,6 +356,11 @@ class Board extends EventEmitter {
                     } else if (mode === 1 && group === 1) {
                         return this.client.readHoldingRegisters(1022 + ((prefix === 'AO') ? 0 : 5), 2);
                     }
+                })
+                .catch( err => {
+                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                    if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, ref=${prefix}.${group}.${id} register: ${((mode !==1) ? 1020: 1022) + ((prefix === 'AO') ? 0 : 5)}, length: 2)`);
+                    else error(err);
                 })
                 .then(data => {
                     dev = data.data[0];
@@ -366,7 +381,7 @@ class Board extends EventEmitter {
                 })
                 .catch( err => {
                     const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
-                    if (errdesc) error(errdesc);
+                    if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, register: ${start}, length: 2)`);
                     else error(err);
                 });
         } else {
@@ -401,7 +416,7 @@ class Board extends EventEmitter {
                 })
                 .catch( err => {
                     const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
-                    if (errdesc) error(errdesc);
+                    if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, register: ${start}, length: 2)`);
                     else error(err);
                 });
             // Read LED states
@@ -412,7 +427,7 @@ class Board extends EventEmitter {
                     })
                     .catch( err => {
                         const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
-                        if (errdesc) error(errdesc);
+                        if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, register: 20, length: 1)`);
                         else error(err);
                     });
             }
@@ -425,7 +440,7 @@ class Board extends EventEmitter {
                     })
                     .catch( err => {
                         const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
-                        if (errdesc) error(errdesc);
+                        if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, register: 2, length: 2)`);
                         else error(err);
                     });
             }
@@ -452,7 +467,7 @@ class Board extends EventEmitter {
                 })
                 .catch( err => {
                     const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
-                    if (errdesc) error(errdesc);
+                    if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, register: ${countStart[i]}, length: ${group.di * 2})`);
                     else error(err);
                 });
         }

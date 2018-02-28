@@ -327,26 +327,31 @@ class Board extends EventEmitter {
 
         if (group === 1) {
             // Get mode (3 = resistance, 1 = current, 0 = voltage)
+            let catched = false;
             this.client.readHoldingRegisters(1019, 1)
                 .then(data => {
                     mode = data.data[0];
                     // Get Vref
                     return this.client.readHoldingRegisters(1009, 1);
                 })
-                .catch( err => {
+                .catch(err => {
                     const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
                     if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, ref: vref, register: 1019, length: 1)`);
                     else error(err);
+                    catched = true;
                 })
                 .then(data => {
                     vref = data.data[0];
                     // Get vrefInt
                     return this.client.readHoldingRegisters(5, 1);
                 })
-                .catch( err => {
-                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
-                    if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, ref: vrefInt, register: 5, length: 1)`);
-                    else error(err);
+                .catch(err => {
+                    if (catched === false) {
+                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                        if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, ref: vrefInt, register: 5, length: 1)`);
+                        else error(err);
+                        catched = true;
+                    }
                 })
                 .then(data => {
                     vrefInt = data.data[0];
@@ -357,10 +362,13 @@ class Board extends EventEmitter {
                         return this.client.readHoldingRegisters(1022 + ((prefix === 'AO') ? 0 : 5), 2);
                     }
                 })
-                .catch( err => {
-                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
-                    if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, ref=${prefix}.${group}.${id} register: ${((mode !==1) ? 1020: 1022) + ((prefix === 'AO') ? 0 : 5)}, length: 2)`);
-                    else error(err);
+                .catch(err => {
+                    if (catched === false) {
+                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                        if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, ref=${prefix}.${group}.${id} register: ${((mode !==1) ? 1020: 1022) + ((prefix === 'AO') ? 0 : 5)}, length: 2)`);
+                        else error(err);
+                        catched = true;
+                    }
                 })
                 .then(data => {
                     dev = data.data[0];
@@ -379,10 +387,12 @@ class Board extends EventEmitter {
                         }
                     }
                 })
-                .catch( err => {
-                    const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
-                    if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, register: ${start}, length: 2)`);
-                    else error(err);
+                .catch(err => {
+                    if (catched === false) {
+                        const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
+                        if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, register: ${start}, length: 2)`);
+                        else error(err);
+                    }
                 });
         } else {
             // TODO : check if there are no binary operation to convert the actual value
@@ -410,11 +420,11 @@ class Board extends EventEmitter {
             let start = (group.id - 1) * 100;
             // Read DI and DO states
             this.client.readHoldingRegisters(start, 2)
-                .then( data => {
+                .then(data => {
                     this.storeDigitalState('DI' + group.id, data.data[0], group.di);
                     this.storeDigitalState('DO' + group.id, data.data[1], group.do);
                 })
-                .catch( err => {
+                .catch(err => {
                     const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
                     if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, register: ${start}, length: 2)`);
                     else error(err);
@@ -422,10 +432,10 @@ class Board extends EventEmitter {
             // Read LED states
             if (group.id === 1) {
                 this.client.readHoldingRegisters(20, 1)
-                    .then( data => {
+                    .then(data => {
                         this.storeDigitalState('LED' + group.id, data.data[0], group.led);
                     })
-                    .catch( err => {
+                    .catch(err => {
                         const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
                         if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, register: 20, length: 1)`);
                         else error(err);
@@ -434,11 +444,11 @@ class Board extends EventEmitter {
             // Read AO and AI states (only on group 1 and not x5xx series for now)
             if (group.id === 1) {
                 this.client.readHoldingRegisters(2, 2)
-                    .then( data => {
+                    .then(data => {
                         this.storeAnalogueState('AO', group.id, 1, data.data[0]);
                         this.storeAnalogueState('AI', group.id, 1, data.data[1]);
                     })
-                    .catch( err => {
+                    .catch(err => {
                         const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
                         if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, register: 2, length: 2)`);
                         else error(err);
@@ -458,14 +468,14 @@ class Board extends EventEmitter {
             let group = this.groups[i];
             // Read DI counters
             this.client.readHoldingRegisters(countStart[i], (group.di * 2))
-                .then( data => {
+                .then(data => {
                     for (let j = 0; j < group.di; j++) {
                         let id = 'DI' + group.id + '.' + (j + 1);
                         // Counters are stored over two words.
                         this.counter[id] = data.data[j * 2] + data.data[j * 2 + 1];
                     }
                 })
-                .catch( err => {
+                .catch(err => {
                     const errdesc = MODBUS_ERRNO[parseInt(err.message.split(' ').pop())];
                     if (errdesc) error(`ModBus::readHoldingRegisters Error: ${errdesc} (board: ${this.name}, register: ${countStart[i]}, length: ${group.di * 2})`);
                     else error(err);

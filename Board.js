@@ -4,6 +4,7 @@ const EventEmitter = require('events').EventEmitter;
 const Neuron = require('./Neuron');
 const RtuConnection = require("./RtuConnection");
 const TcpConnection = require("./TcpConnection");
+const math = require('mathjs');
 
 const debug = require('debug');
 const info = debug('unipi-neuron:board:info');
@@ -350,11 +351,11 @@ class Board extends EventEmitter {
                     dev = data.data[0];
                     offset = data.data[1];
                     // Calc result (Neuron technical manual p.16)
-                    const result =
+                    const result = math.round(
                         (3.3 * (vref / vrefInt)) *
                         ((mode === 0) ? 3 : (mode === 1) ? 10 : 1) *
                         (value / 4096) *
-                        (1 + (dev / 10000)) + (offset / 1000);
+                        (1 + (dev / 10000)) + (offset / 1000), 2);
                     const currentValue = this.getState(id);
                     if (currentValue !== result) {
                         this.state[`${prefix}${group}.${id}`] = result;
